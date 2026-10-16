@@ -1,35 +1,133 @@
-# Unsupervised anomaly detection on 5G-NIDD flows (offline analysis)
+# 5G NIDD Intrusion Detection System
 
-Research question: a model trained only on benign 5G network flows flags traffic that looks different. How well does it detect
-attacks, and how does it compare to a supervised classifier on attack families the classifier never saw in training?
+**Status: In Progress**
 
-## Method
-- Data: 5G-NIDD (University of Oulu 5G testbed; DoS floods and port scans), flow-level CSV. CC BY 4.0, cite the dataset paper.
-- Isolation Forest trained on benign training flows only.
-- Supervised Random Forest trained on both benign and attack training rows as a comparison candidate.
-- Operating thresholds set from benign validation flows at fixed false-positive rates (1%, 5%, 10%). No attack labels are used to tune it.
-- Metrics for both models: ROC-AUC, PR-AUC, recall at fixed FPR, per-attack-family recall, and an estimated precision if attacks were rare in real traffic.
-- Unseen-family test: a Random Forest is retrained once per attack family with that family removed, and compared with the Isolation Forest.
-- Split: per-family blocked split (earliest flows train, latest test) to reduce leakage between near-identical neighbouring flows. Numeric sequence-like columns such as `Seq` are not treated as real timestamps; if no valid timestamp exists, blocked mode follows file order.
+A machine learning project exploring network intrusion detection using flow-level traffic features from the 5G-NIDD dataset.
 
-## Run
-```bash
-pip install -r requirements.txt
-# put the real CSV at data/5G-NIDD-combined.csv  (or: python make_synthetic.py  for a SYNTHETIC test file)
-python experiment.py --inspect      # check detected columns, dropped columns, leakage warnings
-python experiment.py                # full experiment -> artifacts/ (metrics.json, report.md, plots)
-streamlit run app.py
+The project compares an unsupervised anomaly detection approach with a supervised classification model to investigate the detection of malicious network traffic and the challenges of identifying attack families not encountered during training.
+
+## Objectives
+
+- Explore and preprocess network-flow traffic data.
+- Build an intrusion detection pipeline using flow-level features.
+- Evaluate unsupervised anomaly detection using Isolation Forest.
+- Compare its performance with a supervised Random Forest classifier.
+- Investigate generalization to previously unseen attack families.
+- Document evaluation results, limitations, and future improvements.
+
+## Methods and Models
+
+### Isolation Forest
+An unsupervised anomaly detection model trained to identify observations that differ from the learned distribution of benign traffic.
+
+### Random Forest
+A supervised classification baseline used to distinguish benign and attack traffic based on labelled examples.
+
+### Evaluation
+The experiment pipeline examines ROC-AUC, PR-AUC, recall at selected false-positive rates, and leave-one-attack-family-out evaluation.
+
+Reported results are preliminary and require further validation before conclusions about generalization or real-world deployment can be drawn.
+
+## Project Structure
+
+```text
+5G-NIDD-Intrusion-Detection/
+├── app.py
+├── config.py
+├── experiment.py
+├── make_synthetic.py
+├── nidd.py
+├── requirements.txt
+├── README.md
+└── .gitignore
 ```
-The dashboard lets you switch between Isolation Forest and the supervised Random Forest. Use the real dataset for reported results; synthetic data is only a pipeline smoke test.
 
-If `--inspect` guesses a column wrong, set LABEL_COL / ATTACK_COL / TIME_COL / EXTRA_DROP in `config.py`.
+- `app.py` — application entry point.
+- `config.py` — project configuration.
+- `experiment.py` — model experiments and evaluation.
+- `make_synthetic.py` — synthetic data generation utilities.
+- `nidd.py` — dataset loading, preprocessing, feature selection, and splitting.
+- `requirements.txt` — Python dependencies.
 
-## Results
-Paste the tables from `artifacts/report.md` here after running on the real data. Do not report numbers from the synthetic file.
+## Dataset
+
+The project uses the 5G-NIDD dataset, containing labelled network-flow observations.
+
+The dataset is not included in this repository. Obtain it from its original source, review its licence and terms of use, and configure the local dataset path before running experiments.
+
+The current pipeline uses flow-level traffic features. This should not be interpreted as validated detection of attacks within 5G-core signalling or production 5G infrastructure.
+
+## Getting Started
+
+### Requirements
+
+- Python 3.10 or a compatible version supported by the dependencies
+- Git
+- The dataset configured locally
+
+### Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/Anthraxx9/5G-NIDD-Intrusion-Detection.git
+cd 5G-NIDD-Intrusion-Detection
+```
+
+Create and activate a virtual environment on Windows:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+Install the dependencies:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+### Running experiments
+
+After configuring the dataset path in accordance with the project's configuration:
+
+```bash
+python experiment.py --split random --data "PATH_TO_DATASET.csv"
+```
+
+Replace `PATH_TO_DATASET.csv` with the actual local path to your dataset.
+
+Review `config.py` and the command-line options in `experiment.py` if your local configuration differs.
+
+## Current Work
+
+- Dataset loading and feature preprocessing.
+- Unsupervised and supervised model comparison.
+- Evaluation across held-out attack families.
+- Result validation and documentation.
 
 ## Limitations
-- Offline analysis of labelled flow records from one testbed. Not real-time, not deployed.
-- Features are ordinary flow statistics, not 5G-core signalling.
-- Only DoS floods and port scans are covered.
-- Precision depends on attack prevalence; the test mix is not a real network.
-- Flows within one capture are correlated, so scores may still be optimistic.
+
+- Results depend on the dataset, its labelling, and the evaluation split.
+- Correlated or duplicated flows may affect measured performance.
+- Random train/test splits may overestimate generalization when related observations appear in multiple splits.
+- Strong supervised results require further investigation for possible leakage and dataset-specific shortcuts.
+- Flow-level benchmark results do not establish real-world production performance.
+
+## Future Improvements
+
+- Audit preprocessing and split integrity for data leakage.
+- Validate results using stronger group-based or time-based splits where appropriate.
+- Investigate false positives and false negatives by attack family.
+- Improve reproducibility and document experimental settings.
+- Explore additional datasets and more realistic deployment conditions.
+
+## Disclaimer
+
+This is an educational and experimental machine learning project. It is not a production-ready security system, and its current results should not be treated as evidence of operational effectiveness.
+
+## Author
+
+**Raj Dwivedi**
+
+- GitHub: [@Anthraxx9](https://github.com/Anthraxx9)
